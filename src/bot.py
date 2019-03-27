@@ -1,4 +1,5 @@
 import facebook
+import pprint
 
 ANHS_ACCESS_TOKEN = 'EAACVS6jUj0QBABAyhEcutQYUVZAnjq55BAYrAt5VzAzabAhn5x8KOmxZBrWB9cpNcIvQanOpMMfQCN3ZBLZACAlZC7ccs7hcwVTMTmbkTsdvhomhSIShzFn19DUajPV2syfYOQwjOrmN13nq7wLguoPTgbOmIClsh1wRU8LAAeEuNbbdYHX5b'
 ANHS_ID = 1456333264610651
@@ -15,11 +16,12 @@ def main():
         version="3.1"
     )
 
-    graph.put_object(
-        parent_object=PATO_ID,
-        connection_name="feed",
-        message='I just posted automatically with python! 2',
+    post_id = graph.put_photo(
+        image=open('img.jpg', 'rb'),
+        message='Look at this cool photo!'
     )
+
+    pprint.pprint(post_id)
 
 
 if __name__ == '__main__':
