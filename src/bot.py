@@ -13,11 +13,15 @@ import facebook
 PATO_ACCESS_TOKEN = 'EAACVS6jUj0QBAG2n9qdrga7ZBjytXpaCdkDfNPscmtQDzmDWoMFqnHFApvQtrYjv2ycQhno7u7Fp8fB7EZC2tzlHj3rIIRTIZAKlFZA71DaJZAQyecMdNul0QkMR8Ryy6fhclYAaxUXWsqiAKHZAqu43Lk3JFYltQJLPHnJLOZB57ZCzDluoRD8YBO42VInFGckZD'
 ANHS_ACCESS_TOKEN = 'EAACVS6jUj0QBABAyhEcutQYUVZAnjq55BAYrAt5VzAzabAhn5x8KOmxZBrWB9cpNcIvQanOpMMfQCN3ZBLZACAlZC7ccs7hcwVTMTmbkTsdvhomhSIShzFn19DUajPV2syfYOQwjOrmN13nq7wLguoPTgbOmIClsh1wRU8LAAeEuNbbdYHX5b'
 latest_tomo_chapter = 911 # read latest chapter
+graph = facebook.GraphAPI(
+    access_token=PATO_ACCESS_TOKEN,
+    version="3.1"
+)
 
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', minutes=1)
+@sched.scheduled_job('interval', seconds=5)
 def bot_job():
     print('------------------------')
     print('Running every 1 minute')
@@ -25,10 +29,7 @@ def bot_job():
     token = PATO_ACCESS_TOKEN
     print('Connected with token:', token)
 
-    graph = facebook.GraphAPI(
-        access_token=token,
-        version="3.1"
-    )
+    global graph
 
     files = os.listdir()
     print('Files:', files)
@@ -65,6 +66,7 @@ def bot_job():
         print('No files to process, It\'s Tomo time')
         now = datetime.datetime.now()
         print('Time:', now)
+        global latest_tomo_chapter
         tomo_chapter = str(latest_tomo_chapter + 1)
         tomo_url = 'https://dropoutmanga.files.wordpress.com/' + str(now.year) + '/' + str(now.month).zfill(2) + '/dropout-tomo-chan-wa-onna-no-ko-page-' + tomo_chapter + '.png'
         print('URL:', tomo_url)
@@ -81,7 +83,7 @@ def bot_job():
 
                 print('Post id:', post_id)
 
-                # update tomo chapter
+                latest_tomo_chapter += 1
             except facebook.GraphAPIError:
                 print('Couldn\'t post chapter')
         except urllib.error.HTTPError:
