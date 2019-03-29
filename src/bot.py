@@ -17,10 +17,10 @@ latest_tomo_chapter = 911 # read latest chapter
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('interval', seconds=5)
+@sched.scheduled_job('interval', minutes=1)
 def bot_job():
     print('------------------------')
-    print('Running every 10 seconds')
+    print('Running every 1 minute')
 
     token = PATO_ACCESS_TOKEN
     print('Connected with token:', token)
