@@ -23,21 +23,18 @@ with open('config.json') as json_config:
         print('\tLatest Tomo chapter:', latest_tomo_chapter)
         print('\tTime delta:', time_delta)
         print('\tImage directory:', image_directory)
-        print('------------------------')
 # Set starting time
-now = datetime(2019, 4, 7, 13, 42)
+now = datetime(2019, 5, 4, 14, 00)
 
 # Connect to the FB API
 graph = facebook.GraphAPI(
     access_token=ANHS_ACCESS_TOKEN,
     version="3.1"
 )
+print('Connected with token:', PATO_ACCESS_TOKEN)
 
 
 def bot_job():
-    print('------------------------')
-    print('Connected with token:', PATO_ACCESS_TOKEN)
-
     global graph
 
     try:
@@ -50,7 +47,7 @@ def bot_job():
                 image_files.append(file)
         if len(image_files) > 0:
             print('Image files:', image_files)
-            process_images(image_files, files)
+            process_images(image_files)
         else:
             print('Tomo')
             # process_tomo()
@@ -58,9 +55,13 @@ def bot_job():
         print(exception)
 
 
-def process_images(image_files, files):
+def process_images(image_files):
     for image_file in image_files:
-        manga_name = extract_name(image_file)
+        print('------------------------')
+        print('Image file: ', image_file)
+        file_name = image_file.split('\\')[-1].replace('_', ' ').replace('"', ' ')
+        manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1].replace('_', ' ').replace('"', ' ')
+        print('Final name:', manga_name)
 
         global now
         scheduled_time = int((now + timedelta(hours=time_delta)).timestamp())
@@ -78,27 +79,22 @@ def process_images(image_files, files):
             image.close()
 
             print('Manga posted succesfully')
-            print('Moving file to processed:', image_file)
             processed_directory = image_directory + 'processed'
             if not os.path.isdir(processed_directory):
                 os.mkdir(processed_directory)
-            destination = processed_directory + '\\' + files[0]
-            print('Destination', destination)
-            try:
-                os.rename(image_file, destination)
-                print('Processed')
-                now = now + timedelta(hours=time_delta)
-            except FileExistsError as exception:
-                print('File exists:', exception)
-                os.rename(image_file, destination + '_1')
-                print('Renamed')
+            destination = processed_directory + '\\' + file_name
+            print('Processed, moving file to:', destination)
+            os.rename(image_file, destination)
+            print('Processed')
+            now = now + timedelta(hours=time_delta)
         except facebook.GraphAPIError as exception:
             print('Couldn\'t post image:', exception)
             image.close()
             failed_directory = image_directory + 'failed'
             if not os.path.isdir(failed_directory):
                 os.mkdir(failed_directory)
-            destination = failed_directory + '\\' + files[0]
+            destination = failed_directory + '\\' + file_name
+            print('Failed, moving file to:', destination)
             os.rename(image_file, destination)
 
 
@@ -131,13 +127,6 @@ def process_tomo():
             print('Couldn\'t post chapter')
     except urllib.error.HTTPError:
         print('No chapter found')
-
-
-def extract_name(image_file):
-    print('Image file: ', image_file)
-    manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1].replace('_', ' ')
-    print('Final name:', manga_name)
-    return manga_name
 
 
 def is_image(file):
