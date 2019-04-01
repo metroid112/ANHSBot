@@ -1,16 +1,14 @@
 import fnmatch
-import os
-import re
-from typing import Dict, Any
-
-from apscheduler.schedulers.blocking import BlockingScheduler
-from datetime import datetime, timedelta
-import urllib
 import io
 import json
+import os
+import re
+import urllib
+from datetime import datetime, timedelta
 
 import facebook
 
+# Loading configuration from JSON
 with open('config.json') as json_config:
     print('Loading config')
     config = json.load(json_config)
@@ -18,90 +16,90 @@ with open('config.json') as json_config:
         ANHS_ACCESS_TOKEN = conf['anhs_access_token']
         PATO_ACCESS_TOKEN = conf['pato_access_token']
         latest_tomo_chapter = conf['latest_tomo_chapter']
+        time_delta = conf['time_delta']
         image_directory = conf['image_directory'] + '\\'
         print('\tANHS Token:', ANHS_ACCESS_TOKEN)
         print('\tPato Token:', PATO_ACCESS_TOKEN)
         print('\tLatest Tomo chapter:', latest_tomo_chapter)
+        print('\tTime delta:', time_delta)
         print('\tImage directory:', image_directory)
         print('------------------------')
+# Set starting time
 now = datetime(2019, 4, 7, 13, 42)
+
+# Connect to the FB API
 graph = facebook.GraphAPI(
     access_token=ANHS_ACCESS_TOKEN,
     version="3.1"
 )
 
-print('Running every 1 hour')
-sched = BlockingScheduler()
 
-
-@sched.scheduled_job('interval', seconds=20)
 def bot_job():
     print('------------------------')
     print('Connected with token:', PATO_ACCESS_TOKEN)
 
     global graph
 
-    files = os.listdir(image_directory)
-    print('Files:', files)
-    image_files = []
-    for file in files:
-        file = image_directory + file
-        if (os.path.isfile(file)) and is_image(file):
-            image_files.append(file)
-
-    if len(image_files) > 0:
-        x = 1
-        process_images(image_files, files)
-    else:
-        x = 2
-        # process_tomo()
+    try:
+        files = os.listdir(image_directory)
+        print('Files:', files)
+        image_files = []
+        for file in files:
+            file = image_directory + file
+            if (os.path.isfile(file)) and is_image(file):
+                image_files.append(file)
+        if len(image_files) > 0:
+            print('Image files:', image_files)
+            process_images(image_files, files)
+        else:
+            print('Tomo')
+            # process_tomo()
+    except FileNotFoundError as exception:
+        print(exception)
 
 
 def process_images(image_files, files):
-    image_file = image_files[0]
-    print('Image files:', image_files)
-    print('Image file: ', image_file)
-    manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1]
-    print('Name before fix:', manga_name)
-    manga_name = manga_name.replace('_', ' ')
-    print('Final name:', manga_name)
-    post_caption = 'Manga: ' + manga_name + '\n\n-Bottroid'
-    global now
-    scheduled_time = int((now + timedelta(hours=3)).timestamp())
-    print(scheduled_time)
-    image = open(image_file, 'rb')
-    try:
-        post_id = graph.put_photo(
-            image=image,
-            message=post_caption,
-            published='false',
-            scheduled_publish_time=scheduled_time
-        )
-        image.close()
+    for image_file in image_files:
+        manga_name = extract_name(image_file)
 
-        print('Manga posted succesfully')
-        if post_id != '':
+        global now
+        scheduled_time = int((now + timedelta(hours=time_delta)).timestamp())
+        print('Scheduled time:', scheduled_time)
+
+        post_caption = 'Manga: ' + manga_name + '\n\n-Bottroid'
+        image = open(image_file, 'rb')
+        try:
+            graph.put_photo(
+                image=image,
+                message=post_caption,
+                published='false',
+                scheduled_publish_time=scheduled_time
+            )
+            image.close()
+
+            print('Manga posted succesfully')
             print('Moving file to processed:', image_file)
             processed_directory = image_directory + 'processed'
             if not os.path.isdir(processed_directory):
                 os.mkdir(processed_directory)
             destination = processed_directory + '\\' + files[0]
+            print('Destination', destination)
             try:
                 os.rename(image_file, destination)
                 print('Processed')
-                now = now + timedelta(hours=3)
-            except FileExistsError:
-                print('File exists, renaming...')
+                now = now + timedelta(hours=time_delta)
+            except FileExistsError as exception:
+                print('File exists:', exception)
                 os.rename(image_file, destination + '_1')
                 print('Renamed')
-    except facebook.GraphAPIError:
-        print('Couldn\'t post image, trying with the next')
-        image.close()
-        failed_directory = image_directory + 'failed'
-        if not os.path.isdir(failed_directory):
-            os.mkdir(failed_directory)
-        destination = failed_directory + '\\' + files[0]
-        os.rename(image_file, destination)
+        except facebook.GraphAPIError as exception:
+            print('Couldn\'t post image:', exception)
+            image.close()
+            failed_directory = image_directory + 'failed'
+            if not os.path.isdir(failed_directory):
+                os.mkdir(failed_directory)
+            destination = failed_directory + '\\' + files[0]
+            os.rename(image_file, destination)
 
 
 def process_tomo():
@@ -135,6 +133,13 @@ def process_tomo():
         print('No chapter found')
 
 
+def extract_name(image_file):
+    print('Image file: ', image_file)
+    manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1].replace('_', ' ')
+    print('Final name:', manga_name)
+    return manga_name
+
+
 def is_image(file):
     return (
             fnmatch.fnmatch(file, '*.png')
@@ -146,4 +151,3 @@ def is_image(file):
 
 
 bot_job()
-sched.start()
