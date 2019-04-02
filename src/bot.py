@@ -18,11 +18,13 @@ with open('config.json', 'r') as json_config:
     latest_tomo_chapter = config['latest_tomo_chapter']
     time_delta = config['time_delta']
     image_directory = config['image_directory'] + '\\'
+    draft_tomo = config['draft_tomo']
     print('\tANHS Token:', ANHS_ACCESS_TOKEN)
     print('\tPato Token:', PATO_ACCESS_TOKEN)
     print('\tLatest Tomo chapter:', latest_tomo_chapter)
     print('\tTime delta:', time_delta)
     print('\tImage directory:', image_directory)
+    print('\tTomo posts as draft?:', draft_tomo)
 
 # Set starting time
 scheduled_time = datetime(2019, 5, 4, 14, 00)
@@ -125,7 +127,8 @@ def process_tomo():
             try:
                 graph.put_photo(
                     image=tomo_file,
-                    message=post_caption
+                    message=post_caption,
+                    published=draft_tomo
                 )
                 print('Chapter posted succesfully')
 
