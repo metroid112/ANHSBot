@@ -14,13 +14,13 @@ with open('config.json', 'r') as json_config:
     print('Loading config')
     config = json.load(json_config)
     ANHS_ACCESS_TOKEN = config['anhs_access_token']
-    PATO_ACCESS_TOKEN = config['pato_access_token']
+    TEST_ACCESS_TOKEN = config['test_access_token']
     latest_tomo_chapter = config['latest_tomo_chapter']
     time_delta = config['time_delta']
     image_directory = config['image_directory'] + '\\'
     draft_tomo = config['draft_tomo']
     print('\tANHS Token:', ANHS_ACCESS_TOKEN)
-    print('\tPato Token:', PATO_ACCESS_TOKEN)
+    print('\tTest Token:', TEST_ACCESS_TOKEN)
     print('\tLatest Tomo chapter:', latest_tomo_chapter)
     print('\tTime delta:', time_delta)
     print('\tImage directory:', image_directory)
@@ -31,7 +31,7 @@ scheduled_time = datetime(2019, 5, 4, 14, 00)
 print('Time:', scheduled_time)
 
 # Set FB Access Token
-token = PATO_ACCESS_TOKEN
+token = TEST_ACCESS_TOKEN
 print('Connected with token:', token[0:10] + '...')
 
 # Connect to the FB API
