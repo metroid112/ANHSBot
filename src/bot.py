@@ -3,35 +3,40 @@ import io
 import json
 import os
 import re
+import time
 import urllib
 from datetime import datetime, timedelta
 
 import facebook
 
 # Loading configuration from JSON
-with open('config.json') as json_config:
+with open('config.json', 'r') as json_config:
     print('Loading config')
     config = json.load(json_config)
-    for conf in config['config']:
-        ANHS_ACCESS_TOKEN = conf['anhs_access_token']
-        PATO_ACCESS_TOKEN = conf['pato_access_token']
-        latest_tomo_chapter = conf['latest_tomo_chapter']
-        time_delta = conf['time_delta']
-        image_directory = conf['image_directory'] + '\\'
-        print('\tANHS Token:', ANHS_ACCESS_TOKEN)
-        print('\tPato Token:', PATO_ACCESS_TOKEN)
-        print('\tLatest Tomo chapter:', latest_tomo_chapter)
-        print('\tTime delta:', time_delta)
-        print('\tImage directory:', image_directory)
+    ANHS_ACCESS_TOKEN = config['anhs_access_token']
+    PATO_ACCESS_TOKEN = config['pato_access_token']
+    latest_tomo_chapter = config['latest_tomo_chapter']
+    time_delta = config['time_delta']
+    image_directory = config['image_directory'] + '\\'
+    print('\tANHS Token:', ANHS_ACCESS_TOKEN)
+    print('\tPato Token:', PATO_ACCESS_TOKEN)
+    print('\tLatest Tomo chapter:', latest_tomo_chapter)
+    print('\tTime delta:', time_delta)
+    print('\tImage directory:', image_directory)
+
 # Set starting time
-now = datetime(2019, 5, 4, 14, 00)
+scheduled_time = datetime(2019, 5, 4, 14, 00)
+print('Time:', scheduled_time)
+
+# Set FB Access Token
+token = PATO_ACCESS_TOKEN
+print('Connected with token:', token[0:10] + '...')
 
 # Connect to the FB API
 graph = facebook.GraphAPI(
-    access_token=ANHS_ACCESS_TOKEN,
+    access_token=token,
     version="3.1"
 )
-print('Connected with token:', PATO_ACCESS_TOKEN)
 
 
 def bot_job():
@@ -50,9 +55,10 @@ def bot_job():
             process_images(image_files)
         else:
             print('Tomo')
-            # process_tomo()
+            process_tomo()
     except FileNotFoundError as exception:
         print(exception)
+        process_tomo()
 
 
 def process_images(image_files):
@@ -63,8 +69,8 @@ def process_images(image_files):
         manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1].replace('_', ' ').replace('"', ' ')
         print('Final name:', manga_name)
 
-        global now
-        scheduled_time = int((now + timedelta(hours=time_delta)).timestamp())
+        global scheduled_time
+        scheduled_time = int((scheduled_time + timedelta(hours=time_delta)).timestamp())
         print('Scheduled time:', scheduled_time)
 
         post_caption = 'Manga: ' + manga_name + '\n\n-Bottroid'
@@ -86,7 +92,7 @@ def process_images(image_files):
             print('Processed, moving file to:', destination)
             os.rename(image_file, destination)
             print('Processed')
-            now = now + timedelta(hours=time_delta)
+            scheduled_time = scheduled_time + timedelta(hours=time_delta)
         except facebook.GraphAPIError as exception:
             print('Couldn\'t post image:', exception)
             image.close()
@@ -99,34 +105,45 @@ def process_images(image_files):
 
 
 def process_tomo():
-    print('No files to process, It\'s Tomo time')
-    global now
-    print('Time:', now)
-
+    print('------------------------')
     global latest_tomo_chapter
+    now = datetime.now()
+
     tomo_chapter = str(latest_tomo_chapter + 1)
     print('Searching for chapter', tomo_chapter)
 
-    tomo_url = 'https://dropoutmanga.files.wordpress.com/' + str(now.year) + '/' + str(now.month).zfill(
-        2) + '/dropout-tomo-chan-wa-onna-no-ko-page-' + tomo_chapter + '.png'
+    tomo_url = 'https://dropoutmanga.files.wordpress.com/' + str(now.year) + '/' + str(now.month).zfill(2)
+    tomo_url += '/dropout-tomo-chan-wa-onna-no-ko-page-' + tomo_chapter + '.png'
     print('Trying URL:', tomo_url)
-    try:
-        tomo_url_file = urllib.request.urlopen(tomo_url)
-        tomo_file = io.BytesIO(tomo_url_file.read())
-
-        post_caption = 'Manga: Tomo-chan wa Onnanoko ' + tomo_chapter + '\n\n-Bottroid'
+    found_chapter = False
+    while not found_chapter:
         try:
-            graph.put_photo(
-                image=tomo_file,
-                message=post_caption
-            )
-            print('Chapter posted succesfully')
+            tomo_url_file = urllib.request.urlopen(tomo_url)
+            tomo_file = io.BytesIO(tomo_url_file.read())
 
-            latest_tomo_chapter += 1
-        except facebook.GraphAPIError:
-            print('Couldn\'t post chapter')
-    except urllib.error.HTTPError:
-        print('No chapter found')
+            post_caption = 'Manga: Tomo-chan wa Onnanoko ' + tomo_chapter + '\n\n-Bottroid'
+            try:
+                graph.put_photo(
+                    image=tomo_file,
+                    message=post_caption
+                )
+                print('Chapter posted succesfully')
+
+                with open('config.json', 'r+') as json_config_tomo:
+                    print('Writing latest Tomo chapter:', tomo_chapter)
+                    config_tomo = json.load(json_config_tomo)
+                    config_tomo['latest_tomo_chapter'] = int(tomo_chapter)
+                    json_config_tomo.seek(0)
+                    json.dump(config_tomo, json_config_tomo)
+                    json_config_tomo.truncate()
+
+                found_chapter = True
+            except facebook.GraphAPIError as exception:
+                print('Couldn\'t post chapter:', exception)
+        except urllib.error.HTTPError as exception:
+            print('No chapter found:', exception)
+            time.sleep(300)
+    process_tomo()
 
 
 def is_image(file):
