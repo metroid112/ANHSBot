@@ -67,8 +67,8 @@ def process_images(image_files):
     for image_file in image_files:
         print('------------------------')
         print('Image file: ', image_file)
-        file_name = image_file.split('\\')[-1].replace('_', ' ').replace('"', ' ')
-        manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1].replace('_', ' ').replace('"', ' ')
+        file_name = image_file.split('\\')[-1]
+        manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1]
         print('Final name:', manga_name)
 
         global scheduled_time
