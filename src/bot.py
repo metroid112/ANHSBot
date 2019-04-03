@@ -66,7 +66,7 @@ def process_images(image_files):
         print('------------------------')
         print('Image file: ', image_file)
         file_name = image_file.split('\\')[-1]
-        manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1]
+        manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1].replace('_', ' ')
         print('Final name:', manga_name)
 
         global time_start
