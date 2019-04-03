@@ -16,22 +16,20 @@ with open('config.json', 'r') as json_config:
     ANHS_ACCESS_TOKEN = config['anhs_access_token']
     TEST_ACCESS_TOKEN = config['test_access_token']
     latest_tomo_chapter = config['latest_tomo_chapter']
+    time_start = datetime.fromtimestamp(config['time_start'])
     time_delta = config['time_delta']
     image_directory = config['image_directory'] + '\\'
     draft_tomo = config['draft_tomo']
     print('\tANHS Token:', ANHS_ACCESS_TOKEN)
     print('\tTest Token:', TEST_ACCESS_TOKEN)
     print('\tLatest Tomo chapter:', latest_tomo_chapter)
+    print('\tTime start:', time_start)
     print('\tTime delta:', time_delta)
     print('\tImage directory:', image_directory)
     print('\tTomo posts as draft?:', draft_tomo)
 
-# Set starting time
-scheduled_time = datetime(2019, 5, 4, 14, 00)
-print('Time:', scheduled_time)
-
 # Set FB Access Token
-token = TEST_ACCESS_TOKEN
+token = ANHS_ACCESS_TOKEN
 print('Connected with token:', token[0:10] + '...')
 
 # Connect to the FB API
@@ -71,8 +69,8 @@ def process_images(image_files):
         manga_name = re.search('(.+?) - ', image_file).group(1).split('\\')[-1]
         print('Final name:', manga_name)
 
-        global scheduled_time
-        scheduled_time = int((scheduled_time + timedelta(hours=time_delta)).timestamp())
+        global time_start
+        scheduled_time = int((time_start + timedelta(hours=time_delta)).timestamp())
         print('Scheduled time:', scheduled_time)
 
         post_caption = 'Manga: ' + manga_name + '\n\n-Bottroid'
@@ -94,7 +92,7 @@ def process_images(image_files):
             print('Processed, moving file to:', destination)
             os.rename(image_file, destination)
             print('Processed')
-            scheduled_time = scheduled_time + timedelta(hours=time_delta)
+            time_start = time_start + timedelta(hours=time_delta)
         except facebook.GraphAPIError as exception:
             print('Couldn\'t post image:', exception)
             image.close()
@@ -104,6 +102,13 @@ def process_images(image_files):
             destination = failed_directory + '\\' + file_name
             print('Failed, moving file to:', destination)
             os.rename(image_file, destination)
+    with open('config.json', 'r+') as json_config_time:
+        print('Writing latest time:', time_start)
+        config_time = json.load(json_config_time)
+        config_time['time_start'] = int(datetime.timestamp(time_start))
+        json_config_time.seek(0)
+        json.dump(config_time, json_config_time)
+        json_config_time.truncate()
 
 
 def process_tomo():
