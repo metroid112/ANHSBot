@@ -1,25 +1,21 @@
-import fnmatch
 import json
 import os
 import re
-import time
 from datetime import datetime, timedelta
+from fnmatch import fnmatch
 
 import facebook
 
 sep = os.sep
 
-# Loading configuration from JSON
 with open('config.json', 'r') as json_config:
     print('Loading config')
     config = json.load(json_config)
     ANHS_ACCESS_TOKEN = config['anhs_access_token']
-    TEST_ACCESS_TOKEN = config['test_access_token']
     time_start = datetime.fromtimestamp(config['time_start'])
     time_delta = config['time_delta']
     image_directory = config['image_directory']
     print('\tANHS Token:', ANHS_ACCESS_TOKEN)
-    print('\tTest Token:', TEST_ACCESS_TOKEN)
     print('\tTime start:', time_start)
     print('\tTime delta:', time_delta)
     print('\tImage directory:', image_directory)
@@ -75,15 +71,12 @@ def process_images(image_files):
                 scheduled_publish_time=scheduled_time
             )
             image.close()
-
-            print('Manga posted succesfully')
-            processed_directory = image_directory + 'processed'
+            processed_directory = image_directory + sep + 'processed'
             if not os.path.isdir(processed_directory):
                 os.mkdir(processed_directory)
-            destination = processed_directory + '\\' + file_name
+            destination = processed_directory + sep + file_name
             print('Processed, moving file to:', destination)
             os.rename(image_file, destination)
-            print('Processed')
             time_start = time_start + timedelta(hours=time_delta)
         except facebook.GraphAPIError as exception:
             print('Couldn\'t post image:', exception)
@@ -91,7 +84,7 @@ def process_images(image_files):
             failed_directory = image_directory + 'failed'
             if not os.path.isdir(failed_directory):
                 os.mkdir(failed_directory)
-            destination = failed_directory + '\\' + file_name
+            destination = failed_directory + sep + file_name
             print('Failed, moving file to:', destination)
             os.rename(image_file, destination)
     with open('config.json', 'r+') as json_config_time:
@@ -105,11 +98,11 @@ def process_images(image_files):
 
 def is_image(file):
     return (
-            fnmatch.fnmatch(file, '*.png')
-            or fnmatch.fnmatch(file, '*.jpeg')
-            or fnmatch.fnmatch(file, '*.jpg')
-            or fnmatch.fnmatch(file, '*.webp')
-            or fnmatch.fnmatch(file, '*.gif')
+            fnmatch(file, '*.png')
+            or fnmatch(file, '*.jpeg')
+            or fnmatch(file, '*.jpg')
+            or fnmatch(file, '*.webp')
+            or fnmatch(file, '*.gif')
     )
 
 
